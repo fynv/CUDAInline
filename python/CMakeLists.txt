@@ -40,8 +40,7 @@ target_link_libraries(PyCUDAInline CUDAInline)
 
 
 if (WIN32) 
-install(TARGETS PyCUDAInline RUNTIME DESTINATION test_python/CUDAInline 
-		)
+install(TARGETS PyCUDAInline RUNTIME DESTINATION test_python/CUDAInline)
 else()
 install(TARGETS PyCUDAInline DESTINATION test_python/CUDAInline)
 endif()
