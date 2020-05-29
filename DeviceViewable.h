@@ -83,34 +83,4 @@ public:\
 
 	DECLAR_DV_BASIC(DVSizeT, size_t)
 
-
-	inline DeviceViewable* dv_from_viewbuf(const ViewBuf& buf, const char* type)
-	{
-		std::string s_type = type;
-		if (s_type == "int8_t")
-			return new DVInt8(*(int8_t*)buf.data());
-		else if (s_type == "uint8_t")
-			return new DVUInt8(*(uint8_t*)buf.data());
-		else if (s_type == "int16_t")
-			return new DVInt16(*(int16_t*)buf.data());
-		else if (s_type == "uint16_t")
-			return new DVUInt16(*(uint16_t*)buf.data());
-		else if (s_type == "int32_t")
-			return new DVInt32(*(int32_t*)buf.data());
-		else if (s_type == "uint32_t")
-			return new DVUInt32(*(uint32_t*)buf.data());
-		else if (s_type == "int64_t")
-			return new DVInt64(*(int64_t*)buf.data());
-		else if (s_type == "uint64_t")
-			return new DVUInt64(*(uint64_t*)buf.data());
-		else if (s_type == "float")
-			return new DVFloat(*(float*)buf.data());
-		else if (s_type == "double")
-			return new DVDouble(*(double*)buf.data());
-		else if (s_type == "bool")
-			return new DVBool(*(bool*)buf.data());
-		else
-			return new SomeDeviceViewable(type, buf.data(), buf.size());
-	}
-
 }
