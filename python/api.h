@@ -20,7 +20,8 @@ extern "C"
 	PY_CUDAInline_API void n_dim3_destroy(void* cptr);
 
 	// Context
-	PY_CUDAInline_API void n_set_libnvrtc_path(const char* path);
+	PY_CUDAInline_API void n_set_libnvrtc_path(const char* path);	
+	PY_CUDAInline_API int n_cudainline_try_init();
 	PY_CUDAInline_API void n_set_verbose(unsigned verbose);
 	PY_CUDAInline_API unsigned long long n_size_of(const char* cls);
 	PY_CUDAInline_API void n_add_include_dir(const char* dir);

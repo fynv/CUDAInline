@@ -12,7 +12,7 @@ namespace CUInline
 	};
 
 	void set_libnvrtc_path(const char* path);
-
+	bool TryInit();
 	void SetVerbose(bool verbose = true);
 
 	// reflection 

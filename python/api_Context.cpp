@@ -12,6 +12,11 @@ void n_set_libnvrtc_path(const char* path)
 	set_libnvrtc_path(path);
 }
 
+int n_cudainline_try_init()
+{
+	return TryInit() ? 1 : 0;
+}
+
 void n_set_verbose(unsigned verbose)
 {
 	SetVerbose(verbose != 0);

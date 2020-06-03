@@ -19,6 +19,7 @@ void n_dim3_destroy(void* cptr);
 
 // Context
 void n_set_libnvrtc_path(const char* path);
+int n_cudainline_try_init();
 void n_set_verbose(unsigned verbose);
 unsigned long long n_size_of(const char* cls);
 void n_add_include_dir(const char* dir);

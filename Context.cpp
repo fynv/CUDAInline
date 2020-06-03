@@ -18,6 +18,7 @@ namespace CUInline
 	{
 	public:
 		static void set_libnvrtc_path(const char* path);
+		static bool try_init();
 		static Context& get_context();
 
 		void set_verbose(bool verbose = true);
@@ -76,6 +77,16 @@ namespace CUInline
 	void set_libnvrtc_path(const char* path)
 	{
 		Context::set_libnvrtc_path(path);
+	}
+
+	bool TryInit()
+	{
+		if (Context::try_init())
+		{
+			Context::get_context();
+			return true;
+		}
+		return false;
 	}
 
 	void SetVerbose(bool verbose)

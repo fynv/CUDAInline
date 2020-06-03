@@ -15,8 +15,8 @@ namespace CUInline
 	{
 		if (!init_cuda())
 		{
-			printf("Cannot find CUDA driver. Exiting.\n");
-			exit(0);
+			printf("Cannot find CUDA driver.\n");
+			return false;
 		}
 		cuInit(0);
 
@@ -67,19 +67,25 @@ namespace CUInline
 		return true;
 	}
 
-	static int s_get_compute_capability()
+	static int s_get_compute_capability(bool is_trying = false)
 	{
 		static int cap = -1;
 		if (cap == -1)
 		{
 			if (!s_cuda_init(cap))
 			{
-				printf("CUDA initialization failed. Exiting.\n");
-				exit(0);
+				printf("CUDA initialization failed. \n");
+				if (is_trying) return -1;
+				else exit(0);
 			}
 			if (cap < 2 || cap>7) cap = 7;
 		}
 		return cap;
+	}
+
+	bool Context::try_init()
+	{
+		return s_get_compute_capability(true) != -1;
 	}
 
 	Context& Context::get_context()
