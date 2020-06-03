@@ -34,6 +34,7 @@ namespace CUInline
 
 	DVBuffer::DVBuffer(size_t size, void* hdata)
 	{
+		TryInit();
 		m_size = size;
 		CUdeviceptr dptr;
 		cuMemAlloc(&dptr, m_size);
