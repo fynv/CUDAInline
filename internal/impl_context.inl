@@ -213,9 +213,10 @@ namespace CUInline
 		{
 			if (!m_verbose)
 			{
-				m_mutex_structs.lock_shared();
-				print_code(m_name_header_of_structs.c_str(), m_header_of_structs.c_str());
-				m_mutex_structs.unlock_shared();
+				{
+					std::shared_lock lock(m_mutex_structs);
+					print_code(m_name_header_of_structs.c_str(), m_header_of_structs.c_str());
+				}				
 				print_code("saxpy.cu", src);
 			}
 
@@ -238,15 +239,15 @@ namespace CUInline
 	size_t Context::size_of(const char* cls)
 	{
 		// try to find in the context cache first
-		m_mutex_sizes.lock_shared();
-		decltype(m_size_of_types)::iterator it = m_size_of_types.find(cls);
-		if (it != m_size_of_types.end())
 		{
-			size_t size = it->second;
-			m_mutex_sizes.unlock_shared();
-			return size;
+			std::shared_lock lock(m_mutex_sizes);
+			decltype(m_size_of_types)::iterator it = m_size_of_types.find(cls);
+			if (it != m_size_of_types.end())
+			{
+				size_t size = it->second;
+				return size;
+			}
 		}
-		m_mutex_sizes.unlock_shared();
 
 		// reflect from device code
 		std::string saxpy;
@@ -257,9 +258,10 @@ namespace CUInline
 
 		if (m_verbose)
 		{
-			m_mutex_structs.lock_shared();
-			print_code(m_name_header_of_structs.c_str(), m_header_of_structs.c_str());
-			m_mutex_structs.unlock_shared();
+			{
+				std::shared_lock lock(m_mutex_structs);
+				print_code(m_name_header_of_structs.c_str(), m_header_of_structs.c_str());
+			}
 			print_code("saxpy.cu", saxpy.c_str());
 		}
 
@@ -306,9 +308,10 @@ namespace CUInline
 		}
 
 		// cache the result
-		m_mutex_sizes.lock();
-		m_size_of_types[cls] = size;
-		m_mutex_sizes.unlock();
+		{
+			std::unique_lock lock(m_mutex_sizes);
+			m_size_of_types[cls] = size;
+		}
 
 		return size;
 	}
@@ -329,15 +332,15 @@ namespace CUInline
 		}
 
 		// try to find in the context cache first
-		m_mutex_offsets.lock_shared();
-		decltype(m_offsets_of_structs)::iterator it = m_offsets_of_structs.find(name_struct);
-		if (it != m_offsets_of_structs.end())
 		{
-			memcpy(offsets, it->second.data(), sizeof(size_t)*it->second.size());
-			m_mutex_offsets.unlock_shared();
-			return true;
+			std::shared_lock lock(m_mutex_offsets);
+			decltype(m_offsets_of_structs)::iterator it = m_offsets_of_structs.find(name_struct);
+			if (it != m_offsets_of_structs.end())
+			{
+				memcpy(offsets, it->second.data(), sizeof(size_t)*it->second.size());
+				return true;
+			}
 		}
-		m_mutex_offsets.unlock_shared();
 
 		// reflect from device code
 		std::vector<size_t> res(name_members.size() + 1);
@@ -361,9 +364,10 @@ namespace CUInline
 
 		if (m_verbose)
 		{
-			m_mutex_structs.lock_shared();
-			print_code(m_name_header_of_structs.c_str(), m_header_of_structs.c_str());
-			m_mutex_structs.unlock_shared();
+			{
+				std::shared_lock lock(m_mutex_structs);
+				print_code(m_name_header_of_structs.c_str(), m_header_of_structs.c_str());
+			}
 			print_code("saxpy.cu", saxpy.c_str());
 		}
 
@@ -414,9 +418,10 @@ namespace CUInline
 		}
 
 		// cache the result
-		m_mutex_offsets.lock();
-		m_offsets_of_structs[name_struct] = res;
-		m_mutex_offsets.unlock();
+		{
+			std::unique_lock lock(m_mutex_offsets);
+			m_offsets_of_structs[name_struct] = res;
+		}
 		memcpy(offsets, res.data(), sizeof(size_t)*res.size());
 		return true;
 	}
@@ -457,9 +462,10 @@ namespace CUInline
 
 		if (m_verbose)
 		{
-			m_mutex_structs.lock_shared();
-			print_code(m_name_header_of_structs.c_str(), m_header_of_structs.c_str());
-			m_mutex_structs.unlock_shared();
+			{
+				std::shared_lock lock(m_mutex_structs);
+				print_code(m_name_header_of_structs.c_str(), m_header_of_structs.c_str());
+			}
 			print_code("saxpy.cu", saxpy.c_str());
 		}
 
@@ -467,15 +473,13 @@ namespace CUInline
 		KernelId_t kid = (KernelId_t)(-1);
 
 		{
-			m_mutex_kernels.lock_shared();
+			std::shared_lock lock(m_mutex_kernels);
 			decltype(m_kernel_id_map)::iterator it = m_kernel_id_map.find(hash);
 			if (it != m_kernel_id_map.end())
 			{
 				kid = it->second;
-				m_mutex_kernels.unlock_shared();
 				return kid;
 			}
-			m_mutex_kernels.unlock_shared();
 		}
 
 		std::vector<char> ptx;
@@ -532,64 +536,77 @@ namespace CUInline
 			if (size > m_constants[i].second.size()) size = m_constants[i].second.size();
 			cuMemcpyHtoD(dptr, m_constants[i].second.data(), size);
 		}
-		m_mutex_kernels.lock();
-		m_kernel_cache.push_back(kernel);
-		kid = (unsigned)m_kernel_cache.size() - 1;
-		m_kernel_id_map[hash] = kid;
-		m_mutex_kernels.unlock();
+		{
+			std::unique_lock lock(m_mutex_kernels);
+			m_kernel_cache.push_back(kernel);
+			kid = (unsigned)m_kernel_cache.size() - 1;
+			m_kernel_id_map[hash] = kid;
+		}
 		return kid;
 	}
 
 	int Context::_launch_calc(KernelId_t kid, unsigned sharedMemBytes)
 	{
-		m_mutex_kernels.lock_shared();
-		Kernel *kernel = m_kernel_cache[kid];
-		m_mutex_kernels.unlock_shared();
-		kernel->mutex.lock_shared();
-		if (sharedMemBytes == kernel->sharedMemBytes_cached)
+		Kernel *kernel;
 		{
-			int size = kernel->sizeBlock;
-			kernel->mutex.unlock_shared();
-			return size;
+			std::shared_lock lock(m_mutex_kernels);
+			kernel = m_kernel_cache[kid];
 		}
-		kernel->mutex.unlock_shared();
 
-		kernel->mutex.lock();
-		launch_calc(kernel->func, sharedMemBytes, kernel->sizeBlock);
-		kernel->sharedMemBytes_cached = sharedMemBytes;
-		int size = kernel->sizeBlock;
-		kernel->mutex.unlock();
+		int size;
+		{
+			std::shared_lock lock(kernel->mutex);
+			if (sharedMemBytes == kernel->sharedMemBytes_cached)
+			{
+				size = kernel->sizeBlock;
+				return size;
+			}
+		}
+
+		{
+			std::unique_lock lock(kernel->mutex);
+			launch_calc(kernel->func, sharedMemBytes, kernel->sizeBlock);
+			kernel->sharedMemBytes_cached = sharedMemBytes;
+			size = kernel->sizeBlock;
+		}
 		return size;
 	}
 
 	int Context::_persist_calc(KernelId_t kid, int sizeBlock, unsigned sharedMemBytes)
 	{
-		m_mutex_kernels.lock_shared();
-		Kernel *kernel = m_kernel_cache[kid];
-		m_mutex_kernels.unlock_shared();
-		kernel->mutex.lock_shared();
-		if (sharedMemBytes == kernel->sharedMemBytes_cached && sizeBlock == kernel->sizeBlock)
+		Kernel *kernel;
 		{
-			int num = kernel->numBlocks;
-			kernel->mutex.unlock_shared();
-			return num;
+			std::shared_lock lock(m_mutex_kernels);
+			kernel = m_kernel_cache[kid];
 		}
-		kernel->mutex.unlock_shared();
 
-		kernel->mutex.lock();
-		persist_calc(kernel->func, sharedMemBytes, sizeBlock, kernel->numBlocks);
-		kernel->sharedMemBytes_cached = sharedMemBytes;
-		kernel->sizeBlock = sizeBlock;
-		int num = kernel->numBlocks;
-		kernel->mutex.unlock();
+		int num;
+		{
+			std::shared_lock lock(kernel->mutex);
+			if (sharedMemBytes == kernel->sharedMemBytes_cached && sizeBlock == kernel->sizeBlock)
+			{
+				num = kernel->numBlocks;
+				return num;
+			}
+		}
+
+		{
+			std::unique_lock lock(kernel->mutex);
+			persist_calc(kernel->func, sharedMemBytes, sizeBlock, kernel->numBlocks);
+			kernel->sharedMemBytes_cached = sharedMemBytes;
+			kernel->sizeBlock = sizeBlock;
+			num = kernel->numBlocks;
+		}
 		return num;
 	}
 
 	bool Context::_launch_kernel(KernelId_t kid, dim_type gridDim, dim_type blockDim, const std::vector<CapturedDeviceViewable>& arg_map, unsigned sharedMemBytes)
 	{
-		m_mutex_kernels.lock_shared();
-		Kernel *kernel = m_kernel_cache[kid];
-		m_mutex_kernels.unlock_shared();
+		Kernel *kernel;
+		{
+			std::shared_lock lock(m_mutex_kernels);
+			kernel = m_kernel_cache[kid];
+		}
 
 		size_t num_params = arg_map.size();
 		std::vector<ViewBuf> argbufs(num_params);
@@ -666,24 +683,23 @@ namespace CUInline
 		char name[32];
 		sprintf(name, "_S_%016llx", hash);
 
-		m_mutex_structs.lock_shared();
-		decltype(m_known_structs)::iterator it = m_known_structs.find(hash);
-		if (it != m_known_structs.end())
 		{
-			m_mutex_structs.unlock_shared();
-			return name;
+			std::shared_lock lock(m_mutex_structs);
+			decltype(m_known_structs)::iterator it = m_known_structs.find(hash);
+			if (it != m_known_structs.end())
+				return name;
 		}
-		m_mutex_structs.unlock_shared();		
 
 		std::string struct_def = std::string("struct ") + name + "\n{\n"
 			"    typedef " + name + " CurType;\n" +
 			struct_body + "};\n";
 
-		m_mutex_structs.lock();
-		m_header_of_structs += struct_def;
-		m_content_built_in_headers[0] = m_header_of_structs.c_str();
-		m_known_structs.insert(hash);
-		m_mutex_structs.unlock();
+		{
+			std::unique_lock lock(m_mutex_structs);
+			m_header_of_structs += struct_def;
+			m_content_built_in_headers[0] = m_header_of_structs.c_str();
+			m_known_structs.insert(hash);
+		}
 
 		return name;
 	}

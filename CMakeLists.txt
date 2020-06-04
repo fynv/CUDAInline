@@ -43,7 +43,7 @@ set (DEFINES  ${DEFINES}
 -D"_CRT_SECURE_NO_WARNINGS"
 )
 else()
-add_definitions(-std=c++14)
+add_definitions(-std=c++17)
 add_compile_options(-fPIC)
 endif()
 
@@ -58,7 +58,7 @@ target_link_libraries(CUDAInline unqlite)
 
 if (WIN32) 
 else()
-target_link_libraries(CUDAInline dl)
+target_link_libraries(CUDAInline dl pthread)
 endif()
 
 
