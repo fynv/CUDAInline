@@ -31,7 +31,11 @@ namespace CUInline
 			int device_count;
 			cuDeviceGetCount(&device_count);
 
-			if (device_count < 1) return false;
+			if (device_count < 1)
+			{
+				printf("Cannot find a CUDA capable device. \n");
+				return false;
+			}
 			for (int current_device = 0; current_device < device_count; current_device++)
 			{
 				CUdevice cuDevice;
@@ -170,7 +174,7 @@ namespace CUInline
 		if (!init_nvrtc(s_libnvrtc_path))
 		{
 			printf("Loading libnvrtc failed. Exiting.\n");
-			exit(0);
+			return false;
 		}
 
 		int compute_cap = s_get_compute_capability();
