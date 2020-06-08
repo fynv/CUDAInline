@@ -425,8 +425,8 @@ namespace CUInline
 		{
 			std::unique_lock<std::shared_mutex> lock(m_mutex_offsets);
 			m_offsets_of_structs[name_struct] = res;
-			memcpy(offsets, res.data(), sizeof(size_t)*res.size());
 		}
+		memcpy(offsets, res.data(), sizeof(size_t)*res.size());
 		return true;
 	}
 
