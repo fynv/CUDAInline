@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unqlite.h>
+#include <mutex>
 #include <shared_mutex>
 #include "cuda_wrapper.h"
 #include "nvtrc_wrapper.h"
@@ -63,10 +64,10 @@ namespace CUInline
 		std::shared_mutex m_mutex_structs;
 
 		std::unordered_map<std::string, size_t> m_size_of_types;
-		std::shared_mutex m_mutex_sizes;
+		std::mutex m_mutex_sizes;
 
 		std::unordered_map<std::string, std::vector<size_t>> m_offsets_of_structs;
-		std::shared_mutex m_mutex_offsets;
+		std::mutex m_mutex_offsets;
 
 		struct Kernel;
 		std::vector<Kernel*> m_kernel_cache;
