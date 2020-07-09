@@ -10,7 +10,7 @@ class DVBufferLike(DeviceViewable):
         native.n_dvbufferlike_from_host(self.m_cptr, ffi.cast("void *", ptr_host_data))
 
     def to_host(self, ptr_host_data, begin = 0, end = -1):
-        native.n_dvbufferlike_to_host(self.m_cptr, ffi.cast("void *", ptr_host_data), begin, end)
+        native.n_dvbufferlike_to_host(self.m_cptr, ffi.cast("void *", ptr_host_data), ctypes.c_ulonglong(begin).value, ctypes.c_ulonglong(end).value)
 
     def range(self, begin = 0, end = -1):
         return DVBufferRange(self, begin, end)
