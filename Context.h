@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <string>
+#include <thread>
+#include <mutex>
 #include "DeviceViewable.h"
 
 namespace CUInline
@@ -34,7 +36,7 @@ namespace CUInline
 	public:
 		size_t num_params() const { return m_param_names.size(); }
 
-		Kernel(const std::vector<const char*>& param_names, const char* code_body);
+		Kernel(const std::vector<const char*>& param_names, const char* code_body, bool type_locked = false);
 		bool calc_optimal_block_size(const DeviceViewable** args, int& sizeBlock, unsigned sharedMemBytes = 0);
 		bool calc_number_blocks(const DeviceViewable** args, int sizeBlock, int& numBlocks, unsigned sharedMemBytes = 0);
 		bool launch(dim_type gridDim, dim_type blockDim, const DeviceViewable** args, unsigned sharedMemBytes = 0);
@@ -42,6 +44,10 @@ namespace CUInline
 	private:
 		std::vector<std::string> m_param_names;
 		std::string m_code_body;
+
+		bool m_type_locked;
+		unsigned m_kid;
+		std::mutex m_mu_type_lock;
 
 	};
 }

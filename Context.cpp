@@ -30,7 +30,9 @@ namespace CUInline
 		bool query_struct(const char* name_struct, const std::vector<const char*>& name_members, size_t* offsets);
 		bool calc_optimal_block_size(const std::vector<CapturedDeviceViewable>& arg_map, const char* code_body, int& sizeBlock, unsigned sharedMemBytes = 0);
 		bool calc_number_blocks(const std::vector<CapturedDeviceViewable>& arg_map, const char* code_body, int sizeBlock, int& numBlocks, unsigned sharedMemBytes = 0);
+		bool launch_kernel(KernelId_t kid, dim_type gridDim, dim_type blockDim, size_t num_args, const DeviceViewable** args, unsigned sharedMemBytes);
 		bool launch_kernel(dim_type gridDim, dim_type blockDim, const std::vector<CapturedDeviceViewable>& arg_map, const char* code_body, unsigned sharedMemBytes = 0);
+		bool launch_kernel(KernelId_t& kid, dim_type gridDim, dim_type blockDim, const std::vector<CapturedDeviceViewable>& arg_map, const char* code_body, unsigned sharedMemBytes = 0);
 
 		void add_include_dir(const char* path);
 		void add_built_in_header(const char* name, const char* content);
@@ -47,7 +49,6 @@ namespace CUInline
 		KernelId_t _build_kernel(const std::vector<CapturedDeviceViewable>& arg_map, const char* code_body);
 		int _launch_calc(KernelId_t kid, unsigned sharedMemBytes);
 		int _persist_calc(KernelId_t kid, int numBlocks, unsigned sharedMemBytes);
-		bool _launch_kernel(KernelId_t kid, dim_type gridDim, dim_type blockDim, const std::vector<CapturedDeviceViewable>& arg_map, unsigned sharedMemBytes);
 
 		static const char* s_libnvrtc_path;
 
@@ -156,11 +157,13 @@ namespace CUInline
 		cuCtxSynchronize();
 	}
 
-	Kernel::Kernel(const std::vector<const char*>& param_names, const char* code_body) :
-		m_param_names(param_names.size()), m_code_body(code_body)
+	Kernel::Kernel(const std::vector<const char*>& param_names, const char* code_body, bool type_locked) :
+		m_param_names(param_names.size()), m_code_body(code_body), m_type_locked(type_locked)
 	{
 		for (size_t i = 0; i < param_names.size(); i++)
 			m_param_names[i] = param_names[i];
+
+		m_kid = (unsigned)(-1);
 	}
 
 	bool Kernel::calc_optimal_block_size(const DeviceViewable** args, int& sizeBlock, unsigned sharedMemBytes)
@@ -190,13 +193,36 @@ namespace CUInline
 	bool Kernel::launch(dim_type gridDim, dim_type blockDim, const DeviceViewable** args, unsigned sharedMemBytes)
 	{
 		Context& ctx = Context::get_context();
-		std::vector<CapturedDeviceViewable> arg_map(m_param_names.size());
-		for (size_t i = 0; i < m_param_names.size(); i++)
+		if (!m_type_locked)
 		{
-			arg_map[i].obj_name = m_param_names[i].c_str();
-			arg_map[i].obj = args[i];
+			std::vector<CapturedDeviceViewable> arg_map(m_param_names.size());
+			for (size_t i = 0; i < m_param_names.size(); i++)
+			{
+				arg_map[i].obj_name = m_param_names[i].c_str();
+				arg_map[i].obj = args[i];
+			}
+			return ctx.launch_kernel(gridDim, blockDim, arg_map, m_code_body.c_str(), sharedMemBytes);
 		}
-		return ctx.launch_kernel(gridDim, blockDim, arg_map, m_code_body.c_str(), sharedMemBytes);
+		else
+		{
+			std::unique_lock<std::mutex> locker(m_mu_type_lock);
+			if (m_kid == (unsigned)(-1))
+			{
+				std::vector<CapturedDeviceViewable> arg_map(m_param_names.size());
+				for (size_t i = 0; i < m_param_names.size(); i++)
+				{
+					arg_map[i].obj_name = m_param_names[i].c_str();
+					arg_map[i].obj = args[i];
+				}
+				return ctx.launch_kernel(m_kid, gridDim, blockDim, arg_map, m_code_body.c_str(), sharedMemBytes);
+			}
+			else
+			{
+				locker.unlock();
+				return ctx.launch_kernel(m_kid, gridDim, blockDim, m_param_names.size(), args, sharedMemBytes);
+			}
+		}
+
 	}
 
 }

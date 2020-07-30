@@ -30,9 +30,9 @@ def Wait():
     native.n_wait()
 
 class Kernel:
-    def __init__(self, param_names, body):
+    def __init__(self, param_names, body, type_locked=False):
         o_param_names = StrArray(param_names)
-        self.m_cptr = native.n_kernel_create(o_param_names.m_cptr, body.encode('utf-8'))
+        self.m_cptr = native.n_kernel_create(o_param_names.m_cptr, body.encode('utf-8'), type_locked)
 
     def __del__(self):
         native.n_kernel_destroy(self.m_cptr)
@@ -65,10 +65,18 @@ class Kernel:
             sharedMemBytes)
 
 class For:
-    def __init__(self, param_names, name_iter, body):
+    def __init__(self, param_names, name_iter, body, type_locked=False):
         self.m_param_names = StrArray(param_names)
         self.m_name_iter = name_iter
         self.m_code_body = body
+        self.m_kernel = Kernel(['begin', 'end', 'func'],
+    '''
+    size_t tid =  threadIdx.x + blockIdx.x*blockDim.x + begin;
+    if(tid>=end) return;
+    func.inner(tid);
+    ''', type_locked)
+        self.m_type_locked = type_locked
+        self.m_sizeBlock = -1
 
     def num_params(self):
         return m_param_names.size()
@@ -86,29 +94,20 @@ class For:
         dvend = DVUInt64(end)
         o_args = ObjArray(args)
         func =  self.InnerProcedural(self.m_param_names, o_args, self.m_name_iter, self.m_code_body)
-        kernel = Kernel(['begin', 'end', 'func'],
-    '''
-    size_t tid =  threadIdx.x + blockIdx.x*blockDim.x + begin;
-    if(tid>=end) return;
-    func.inner(tid);
-    ''')
-        sizeBlock = kernel.calc_optimal_block_size([dvbegin, dvend, func]);
-        numBlocks = int((end - begin + sizeBlock - 1) / sizeBlock)
-        kernel.launch(numBlocks, sizeBlock, [dvbegin, dvend, func])
+        if not self.m_type_locked or self.m_sizeBlock == -1:
+            self.m_sizeBlock = self.m_kernel.calc_optimal_block_size([dvbegin, dvend, func]);            
+        numBlocks = int((end - begin + self.m_sizeBlock - 1) / self.m_sizeBlock)
+        self.m_kernel.launch(numBlocks, self.m_sizeBlock, [dvbegin, dvend, func])
 
     def launch_n(self, n, args):
-        dv_n = DVUInt64(n)
+        dvbegin = DVUInt64(0)
+        dvend = DVUInt64(n)
         o_args = ObjArray(args)
         func =  self.InnerProcedural(self.m_param_names, o_args, self.m_name_iter, self.m_code_body)
-        kernel = Kernel(['n', 'func'],
-    '''
-    size_t tid =  threadIdx.x + blockIdx.x*blockDim.x;
-    if(tid>=n) return;
-    func.inner(tid);
-    ''')
-        sizeBlock = kernel.calc_optimal_block_size([dv_n, func]);
-        numBlocks = int((n + sizeBlock - 1) / sizeBlock)
-        kernel.launch(numBlocks, sizeBlock, [dv_n, func])
+        if not self.m_type_locked or self.m_sizeBlock == -1:
+            self.m_sizeBlock = self.m_kernel.calc_optimal_block_size([dvbegin, dvend, func]);
+        numBlocks = int((n + self.m_sizeBlock - 1) / self.m_sizeBlock)
+        self.m_kernel.launch(numBlocks, self.m_sizeBlock, [dvbegin, dvend, func])
 
 
 

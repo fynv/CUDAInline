@@ -58,14 +58,14 @@ void n_wait()
 	Wait();
 }
 
-void* n_kernel_create(void* ptr_param_list, const char* body)
+void* n_kernel_create(void* ptr_param_list, const char* body, unsigned type_locked)
 {
 	StrArray* param_list = (StrArray*)ptr_param_list;
 	size_t num_params = param_list->size();
 	std::vector<const char*> params(num_params);
 	for (size_t i = 0; i < num_params; i++)
 		params[i] = (*param_list)[i].c_str();
-	Kernel* cptr = new Kernel(params, body);
+	Kernel* cptr = new Kernel(params, body, type_locked!=0);
 	return cptr;
 }
 

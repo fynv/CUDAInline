@@ -592,7 +592,7 @@ namespace CUInline
 		return num;
 	}
 
-	bool Context::_launch_kernel(KernelId_t kid, dim_type gridDim, dim_type blockDim, const std::vector<CapturedDeviceViewable>& arg_map, unsigned sharedMemBytes)
+	bool Context::launch_kernel(KernelId_t kid, dim_type gridDim, dim_type blockDim, size_t num_args, const DeviceViewable** args, unsigned sharedMemBytes)
 	{
 		Kernel *kernel;
 		{
@@ -600,13 +600,12 @@ namespace CUInline
 			kernel = m_kernel_cache[kid];
 		}
 
-		size_t num_params = arg_map.size();
-		std::vector<ViewBuf> argbufs(num_params);
-		std::vector<void*> converted_args(num_params);
+		std::vector<ViewBuf> argbufs(num_args);
+		std::vector<void*> converted_args(num_args);
 
-		for (size_t i = 0; i < num_params; i++)
+		for (size_t i = 0; i < num_args; i++)
 		{
-			argbufs[i] = arg_map[i].obj->view();
+			argbufs[i] = args[i]->view();
 			converted_args[i] = argbufs[i].data();
 		}
 		CUresult res = cuLaunchKernel(kernel->func, gridDim.x, gridDim.y, gridDim.z, blockDim.x, blockDim.y, blockDim.z, sharedMemBytes, 0, converted_args.data(), 0);
@@ -634,7 +633,21 @@ namespace CUInline
 	{
 		KernelId_t kid = _build_kernel(arg_map, code_body);
 		if (kid == (KernelId_t)(-1)) return false;
-		return _launch_kernel(kid, gridDim, blockDim, arg_map, sharedMemBytes);
+		size_t num_params = arg_map.size();
+		std::vector<const DeviceViewable*> args(num_params);
+		for (size_t i = 0; i < num_params; i++)
+			args[i] = arg_map[i].obj;
+		return launch_kernel(kid, gridDim, blockDim, num_params, args.data(), sharedMemBytes);
+	}
+
+	bool Context::launch_kernel(KernelId_t& kid, dim_type gridDim, dim_type blockDim, const std::vector<CapturedDeviceViewable>& arg_map, const char* code_body, unsigned sharedMemBytes)
+	{
+		kid = _build_kernel(arg_map, code_body);
+		size_t num_params = arg_map.size();
+		std::vector<const DeviceViewable*> args(num_params);
+		for (size_t i = 0; i < num_params; i++)
+			args[i] = arg_map[i].obj;
+		return launch_kernel(kid, gridDim, blockDim, num_params, args.data(), sharedMemBytes);
 	}
 
 	void Context::add_include_dir(const char* path)

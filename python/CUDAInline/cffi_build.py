@@ -29,7 +29,7 @@ void n_add_code_block(const char* line);
 void n_add_constant_object(const char* name, void* cptr);
 void n_wait();
 
-void* n_kernel_create(void* ptr_param_list, const char* body);
+void* n_kernel_create(void* ptr_param_list, const char* body, unsigned type_locked);
 void n_kernel_destroy(void* cptr);
 int n_kernel_num_params(void* cptr);
 int n_kernel_calc_optimal_block_size(void* ptr_kernel, void* ptr_arg_list, unsigned sharedMemBytes);

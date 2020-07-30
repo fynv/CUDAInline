@@ -31,7 +31,7 @@ extern "C"
 	PY_CUDAInline_API void n_add_constant_object(const char* name, void* cptr);
 	PY_CUDAInline_API void n_wait();
 
-	PY_CUDAInline_API void* n_kernel_create(void* ptr_param_list, const char* body);
+	PY_CUDAInline_API void* n_kernel_create(void* ptr_param_list, const char* body, unsigned type_locked);
 	PY_CUDAInline_API void n_kernel_destroy(void* cptr);
 	PY_CUDAInline_API int n_kernel_num_params(void* cptr);
 	PY_CUDAInline_API int n_kernel_calc_optimal_block_size(void* ptr_kernel, void* ptr_arg_list, unsigned sharedMemBytes);
